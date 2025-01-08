@@ -1,10 +1,18 @@
-# Übersicht 
+# Goal
+External API from Azure API Management (APIM) zu Azure Function (Backend) should be End2End authorized with managed identities.
+
+# Prerequisites
+- Azure Subscription
+- Entra ID Tenant
+- simple Azure Function (http triggered) function
+
+# Overview
 ![apim-mi_flow.jpg](/.attachments/apim-mi_flow-03f7916d-417e-4af2-9527-371c03ae7747.jpg)
 
-## 1. JWT mit Postman holen
+## 1. Obtain JWT with Postman
 - Authorization Type: OAuth 2.0
 
-|Feldname|Wert  |
+|field |value  |
 |--|--|
 | Grant type | Authorization Code|
 |  Auth URL| https://login.microsoftonline.com/`<your-tenant-id>`/oauth2/v2.0/authorize |
@@ -13,9 +21,9 @@
 | Client Secret | <**Client** App Registration **postmanSecret**> |
 |Scope|api://<**API** App Registration **Application (client) ID**>/user_impersonation|
 
-## 2. APIM mit JWT aufrufen
+## 2. Call APIM with JWT
 ![image.png](/.attachments/image-fc2808c4-d81b-4612-801c-2836b7a343e4.png)
-## 3. APIM validiert JWT gegen Client App Registration
+## 3. APIM validates JWT against Client App Registration
 ```
 <validate-azure-ad-token tenant-id="<your-tenant-id>">
     <client-application-ids>
@@ -29,21 +37,22 @@
 </validate-azure-ad-token>
 ```
 
-## 4. APIM authentifiziert sich selbst mit Managed Identity gegen App Registration von API
+## 4. APIM authenticates with Managed Identity against APIs App Registration
 ```
 <authentication-managed-identity resource="<API App Registration Application (client) ID>" />
 ```
 
-## 5. APIM ruft API authentifiziert auf (mit function code key)
+## 5. APIM calls API authenticated (with function code key)
 
-# Implementierung
-## 0. Ausgangslage
+# Implementation
+
+## 0. Init
 
 ![apim-mi.jpg](/.attachments/apim-mi-1489aee5-8d59-4cba-9148-75893261f83f.jpg)
 ### APIM
 ![image.png](/.attachments/image-de3450bd-3e67-4076-bbb0-7e84294e75ef.png)
 
-## 1. Authentication in Azure Function aktivieren
+## 1. Activate authentication in Azure Function
 [Doku](https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad?tabs=workforce-configuration#daemon-client-application-service-to-service-calls)
 1. Add an identity provider ![image.png](/.attachments/image-11e9b545-390d-42e7-956b-079fd11d3d14.png)
 2. Create new app registration
@@ -65,7 +74,7 @@
 ![image.png](/.attachments/image-f90548f6-fec5-48f6-b97e-60219615d312.png)
 5. Add Managed Identity authentication to APIM policy
 
-    |Feldname|Wert  |
+    |field|value  |
     |--|--|
     | resource  | mytestbackendfnct Application (client) ID |
 
@@ -84,8 +93,8 @@
 10. create client secret for Postman
     ![image.png](/.attachments/image-0fa97898-349f-4e2b-aca5-32aaf54d9ff3.png)
 11. Implement Pre-auth mit JWT validation in APIM Policy
-    **Reihenfolge der Policies ist wichtig!!** `authentication-managed-identity` muss **nach** `validate-azure-ad-token` kommen
-    |Feldname|Wert  |
+    **Policie's order is important!!** `authentication-managed-identity` has to be **after** `validate-azure-ad-token` 
+    |field|value  |
     |--|--|
     | application-id| myClient4mytestbackendfnct Application (client) ID |
 
@@ -98,8 +107,8 @@
     |Feldname|Wert  |
     |--|--|
     | Grant type | Authorization Code|
-    |  Auth URL| https://login.microsoftonline.com/<your-tenant-id>/oauth2/v2.0/authorize |
-    | Access Token URL | https://login.microsoftonline.com/<your-tenant-id>/oauth2/v2.0/token |
+    |  Auth URL| https://login.microsoftonline.com/`<your-tenant-id>`/oauth2/v2.0/authorize |
+    | Access Token URL | https://login.microsoftonline.com/`<your-tenant-id>`/oauth2/v2.0/token |
     | Client ID | myClient4mytestbackendfnct  |
     | Client Secret | `<your-client-secret-value>` |
     |Scope|api://<mytestbackendfnct-application-id>/user_impersonation|
